@@ -1,0 +1,25 @@
+#!/usr/bin/env bash
+
+# shellcheck source=/dev/null
+source "$HOME/.config/ml4w/scripts/ml4w-platform"
+
+SETTING_FILE="$1"
+shift || true
+
+if [[ -z "$SETTING_FILE" ]]; then
+    echo "Usage: $0 <setting-file> [args...]" >&2
+    exit 1
+fi
+
+COMMAND_LINE="$(ml4w_read_setting "$SETTING_FILE" 2>/dev/null || true)"
+if [[ -z "$COMMAND_LINE" ]]; then
+    echo ":: No command configured in $SETTING_FILE" >&2
+    exit 1
+fi
+
+if [[ $# -gt 0 ]]; then
+    quoted_args="$(printf '%q ' "$@")"
+    exec bash -lc "$COMMAND_LINE $quoted_args"
+fi
+
+exec bash -lc "$COMMAND_LINE"

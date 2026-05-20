@@ -98,7 +98,7 @@
     // Wallpaper
     "custom/wallpaper": {
         "format": "",
-        "on-click": "waypaper",
+        "on-click": "~/.config/ml4w/scripts/ml4w-wallpaper-app",
         "on-click-right": "~/.config/hypr/scripts/wallpaper-effects.sh",
         "tooltip": false
     },
@@ -113,7 +113,7 @@
     // Settings
     "custom/settings": {
         "format": "",
-        "on-click": "flatpak run com.ml4w.settings",
+        "on-click": "qs -p ~/.local/share/ml4w-dotfiles-settings/quickshell ipc call settings toggle",
         "tooltip": false
     },
 
@@ -127,7 +127,7 @@
     // Filemanager Launcher
     "custom/filemanager": {
         "format": "",
-        "on-click": "nautilus",
+        "on-click": "~/.config/ml4w/settings/filemanager",
         "tooltip": false
     },
 
@@ -140,8 +140,8 @@
 
     // ML4W Welcome App
     "custom/ml4w-welcome": {
-        "on-click": "flatpak run com.ml4w.sidebar",
-        "on-click-right": "flatpak run com.ml4w.welcome",
+        "on-click": "qs ipc call sidebar toggle",
+        "on-click-right": "qs ipc call welcome toggle",
         "format": " ",
         "tooltip-format": "Open Sidebar"
     },
@@ -156,7 +156,7 @@
     // Rofi Application Launcher
     "custom/appmenu": {
         "format": "Apps",
-        "on-click": "rofi -show drun -replace",
+        "on-click": "~/.config/hypr/scripts/launcher.sh",
         "on-click-right": "~/.config/hypr/scripts/keybindings.sh",
         "tooltip": false
     },
@@ -188,7 +188,7 @@
     // Clock
     "clock": {
         "format": "{:%H:%M %a}",
-        "on-click": "flatpak run com.ml4w.calendar",
+        "on-click": "qs ipc call calendar toggle",
         "tooltip": false
     },
 
@@ -201,13 +201,13 @@
     // CPU
     "cpu": {
         "format": "/ C {usage}% ",
-        "on-click": "alacritty -e htop"
+        "on-click": "~/.config/ml4w/settings/system-monitor.sh"
     },
 
     // Memory
     "memory": {
         "format": "/ M {}% ",
-        "on-click": "alacritty -e htop"
+        "on-click": "~/.config/ml4w/settings/system-monitor.sh"
     },
 
     // Harddisc space used
@@ -215,7 +215,7 @@
         "interval": 30,
         "format": "D {percentage_used}% ",
         "path": "/",
-        "on-click": "alacritty -e htop"
+        "on-click": "~/.config/ml4w/settings/system-monitor.sh"
     },
 
     "hyprland/language": {
@@ -319,7 +319,7 @@
         "format-disabled": "",
         "format-off": "",
         "interval": 30,
-        "on-click": "blueman-manager",
+        "on-click": "~/.config/ml4w/settings/bluetooth.sh",
         "format-no-controller": ""
     },
 

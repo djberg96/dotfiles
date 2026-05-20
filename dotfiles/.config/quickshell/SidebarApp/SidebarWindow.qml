@@ -74,9 +74,9 @@ PanelWindow {
         function close(): void { root.isOpen = false } 
     }
 
-    // --- Check if flatpak is installed when window opens ---
+    // --- Check if the configured Hyprland settings launcher is available ---
     Process {
-        command: ["bash", "-c", Quickshell.env("HOME") + "/.config/ml4w/scripts/ml4w-flatpak-installed com.ml4w.hyprlandsettings"]
+        command: ["bash", "-c", Quickshell.env("HOME") + "/.config/ml4w/scripts/ml4w-hyprland-settings status"]
         running: root.visible
         
         stdout: StdioCollector {
@@ -249,7 +249,7 @@ PanelWindow {
                     visible: root.isHyprlandSettingsInstalled 
                     onClicked: {
                         root.isOpen = false
-                        Quickshell.execDetached(["bash", "-c", "flatpak run com.ml4w.hyprlandsettings"])
+                        Quickshell.execDetached(["bash", "-c", Quickshell.env("HOME") + "/.config/ml4w/scripts/ml4w-hyprland-settings run"])
                     }
                 }
             }
@@ -614,7 +614,7 @@ PanelWindow {
                                 }
                                 ML4WMenuItem { text: "Edit Quicklinks"; onClicked: {
                                         root.isOpen = false
-                                        Quickshell.execDetached(["gnome-text-editor", Quickshell.env("HOME") + "/.config/ml4w/settings/waybar-quicklinks.json"])
+                                        Quickshell.execDetached(["bash", "-lc", Quickshell.env("HOME") + "/.config/ml4w/scripts/ml4w-open-with-setting " + Quickshell.env("HOME") + "/.config/ml4w/settings/editor.sh " + Quickshell.env("HOME") + "/.config/ml4w/settings/waybar-quicklinks.json"])
                                     }
                                 }
                                 ML4WMenuItem { text: "Reload Waybar"; onClicked: {
@@ -742,7 +742,7 @@ PanelWindow {
                                     } 
                                 }
                                 ML4WMenuItem { text: "Open Sidepad Folder"; onClicked: {
-                                        Quickshell.execDetached(["nautilus", Quickshell.env("HOME") + "/.config/sidepad/pads"])
+                                        Quickshell.execDetached(["bash", "-lc", Quickshell.env("HOME") + "/.config/ml4w/scripts/ml4w-open-with-setting " + Quickshell.env("HOME") + "/.config/ml4w/settings/filemanager " + Quickshell.env("HOME") + "/.config/sidepad/pads"])
                                     } 
                                 }
                             }
@@ -789,12 +789,12 @@ PanelWindow {
                                 background: Rectangle { color: Theme.background; border.color: Theme.primary; border.width: 1; radius: 8 }
                                 ML4WMenuItem { text: "Set GTK Theme"; onClicked: {
                                         root.isOpen = false
-                                        Quickshell.execDetached(["nwg-look"])
+                                        Quickshell.execDetached(["bash", "-lc", Quickshell.env("HOME") + "/.config/ml4w/scripts/ml4w-run-setting " + Quickshell.env("HOME") + "/.config/ml4w/settings/theme-gtk.sh"])
                                     } 
                                 }
                                 ML4WMenuItem { text: "Set QT Theme"; onClicked: {
                                         root.isOpen = false
-                                        Quickshell.execDetached(["qt6ct"])
+                                        Quickshell.execDetached(["bash", "-lc", Quickshell.env("HOME") + "/.config/ml4w/scripts/ml4w-run-setting " + Quickshell.env("HOME") + "/.config/ml4w/settings/theme-qt.sh"])
                                     }
                                 }
                                 ML4WMenuItem { text: "Refresh GTK Theme"; onClicked: {

@@ -29,6 +29,8 @@ FreeBSD support should still be considered experimental. The desktop stack itsel
 
 This fork also adjusts several maintenance helpers for FreeBSD. The SDDM helper now has a FreeBSD path using `pkg`, `sysrc`, and `service`, and the snapshot helper can create ZFS boot environments with `bectl` when available. Some scripts remain intentionally Linux-only for now, such as the pacman-specific tweak helpers and the NVIDIA bootstrap script.
 
+This fork also moves more UI launch points onto configurable commands under `~/.config/ml4w/settings/`, including editor, monitor manager, GTK/Qt theme tools, Hyprland Settings, Bluetooth, calculator, file manager, and system monitor launchers. That makes it much easier to retarget the desktop toward FreeBSD-native package choices without editing QML or Waybar files directly.
+
 ### Test and install with the ML4W OS Live ISO
 
 Test the ML4W OS without risk on your computer or in a Virtual Machine with the ML4W Live ISO.

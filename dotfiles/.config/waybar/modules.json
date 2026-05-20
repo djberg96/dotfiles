@@ -112,7 +112,7 @@
   // Wallpaper
   "custom/wallpaper": {
     "format": "",
-    "on-click": "bash -c waypaper &",
+    "on-click": "~/.config/ml4w/scripts/ml4w-wallpaper-app",
     "on-click-right": "~/.config/hypr/scripts/wallpaper-effects.sh",
     "tooltip-format": "Left: Select a wallpaper\nRight: Select wallpaper effect"
   },
@@ -125,7 +125,7 @@
   // Settings
   "custom/settings": {
     "format": "",
-    "on-click": "sleep 0.1 && com.ml4w.dotfilessettings",
+    "on-click": "sleep 0.1 && qs -p ~/.local/share/ml4w-dotfiles-settings/quickshell ipc call settings toggle",
     "tooltip-format": "ML4W Settings"
   },
   // Keybindings
@@ -137,7 +137,7 @@
   // Calculator
   "custom/calculator": {
     "format": "",
-    "on-click": "qalculate-gtk",
+    "on-click": "~/.config/ml4w/settings/calculator.sh",
     "tooltip-format": "Open calculator"
   },
   // Rofi Application Launcher
@@ -152,7 +152,7 @@
   // Rofi Application Launcher
   "custom/appmenuicon": {
     "format": "",
-    "on-click": "sleep 0.2;rofi -show drun -replace",
+    "on-click": "~/.config/hypr/scripts/launcher.sh",
     "on-click-right": "~/.config/hypr/scripts/keybindings.sh",
     "tooltip-format": "Left: Open the application launcher\nRight: Show all keybindings"
   },

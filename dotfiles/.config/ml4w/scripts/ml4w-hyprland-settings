@@ -1,0 +1,53 @@
+#!/usr/bin/env bash
+
+# shellcheck source=/dev/null
+source "$HOME/.config/ml4w/scripts/ml4w-platform"
+
+SETTING_FILE="$HOME/.config/ml4w/settings/hyprland-settings.sh"
+DEFAULT_COMMAND="flatpak run com.ml4w.hyprlandsettings"
+
+read_command() {
+    local command_line=""
+
+    command_line="$(ml4w_read_setting "$SETTING_FILE" 2>/dev/null || true)"
+    if [[ -n "$command_line" ]]; then
+        printf '%s\n' "$command_line"
+    else
+        printf '%s\n' "$DEFAULT_COMMAND"
+    fi
+}
+
+command_is_available() {
+    local command_line="$1"
+
+    if [[ "$command_line" == flatpak\ run\ * ]]; then
+        local app_id="${command_line#flatpak run }"
+        command -v flatpak >/dev/null 2>&1 && flatpak info "$app_id" >/dev/null 2>&1
+        return $?
+    fi
+
+    local binary="${command_line%% *}"
+    command -v "$binary" >/dev/null 2>&1
+}
+
+case "${1:-run}" in
+    status)
+        if command_is_available "$(read_command)"; then
+            echo 0
+        else
+            echo 1
+        fi
+        ;;
+    run)
+        COMMAND_LINE="$(read_command)"
+        if ! command_is_available "$COMMAND_LINE"; then
+            echo ":: Hyprland Settings launcher is not available: $COMMAND_LINE" >&2
+            exit 1
+        fi
+        exec bash -lc "$COMMAND_LINE"
+        ;;
+    *)
+        echo "Usage: $0 {status|run}" >&2
+        exit 1
+        ;;
+esac

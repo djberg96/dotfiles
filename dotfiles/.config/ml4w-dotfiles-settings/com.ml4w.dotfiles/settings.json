@@ -230,6 +230,46 @@
       "mode": "overwrite",
       "default": "blueman-manager"
     },{
+      "name": "Default Monitor Manager",
+      "id": "default_monitor_manager",
+      "instructions": "Enter the command to execute the monitor manager",
+      "file": "~/.config/ml4w/settings/monitor-manager.sh",
+      "type": "textfield",
+      "mode": "overwrite",
+      "default": "nwg-displays"
+    },{
+      "name": "Default Text Editor",
+      "id": "default_text_editor",
+      "instructions": "Enter the command to execute the text editor",
+      "file": "~/.config/ml4w/settings/editor.sh",
+      "type": "textfield",
+      "mode": "overwrite",
+      "default": "gnome-text-editor"
+    },{
+      "name": "GTK Theme Tool",
+      "id": "default_gtk_theme_tool",
+      "instructions": "Enter the command to execute the GTK theme tool",
+      "file": "~/.config/ml4w/settings/theme-gtk.sh",
+      "type": "textfield",
+      "mode": "overwrite",
+      "default": "nwg-look"
+    },{
+      "name": "Qt Theme Tool",
+      "id": "default_qt_theme_tool",
+      "instructions": "Enter the command to execute the Qt theme tool",
+      "file": "~/.config/ml4w/settings/theme-qt.sh",
+      "type": "textfield",
+      "mode": "overwrite",
+      "default": "qt6ct"
+    },{
+      "name": "Hyprland Settings",
+      "id": "default_hyprland_settings",
+      "instructions": "Enter the command to execute the Hyprland settings app",
+      "file": "~/.config/ml4w/settings/hyprland-settings.sh",
+      "type": "textfield",
+      "mode": "overwrite",
+      "default": "flatpak run com.ml4w.hyprlandsettings"
+    },{
       "name": "Default Software Manager",
       "id": "default_software",
       "instructions": "Enter the command to execute the software manager",

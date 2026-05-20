@@ -12,7 +12,7 @@ FloatingWindow {
     implicitWidth: 850
     implicitHeight: 550
 
-    // --- Guard property for the flatpak app ---
+    // --- Guard property for the Hyprland settings app ---
     property bool isHyprlandSettingsInstalled: false
 
     IpcHandler {
@@ -22,15 +22,15 @@ FloatingWindow {
         }
     }
 
-    // --- Check if flatpak is installed when window opens ---
+    // --- Check if the configured Hyprland settings launcher is available ---
     Process {
-        command: ["bash", "-c", Quickshell.env("HOME") + "/.config/ml4w/scripts/ml4w-flatpak-installed com.ml4w.hyprlandsettings"]
+        command: ["bash", "-c", Quickshell.env("HOME") + "/.config/ml4w/scripts/ml4w-hyprland-settings status"]
         running: root.visible
         
         stdout: StdioCollector {
             onStreamFinished: {
                 console.log(this.text.trim())
-                // The script echoes "0" if the app exists/is installed
+                // The script echoes "0" if the configured launcher is available.
                 root.isHyprlandSettingsInstalled = (this.text.trim() === "0")
             }
         }
@@ -98,13 +98,13 @@ FloatingWindow {
                 ML4WMenuItem { 
                     text: qsTr("Keyboard");
                     onClicked: {
-                        Quickshell.execDetached(["gnome-text-editor", Quickshell.env("HOME") + "/.config/hypr/conf/keyboard.conf"])
+                        Quickshell.execDetached(["bash", "-lc", Quickshell.env("HOME") + "/.config/ml4w/scripts/ml4w-open-with-setting " + Quickshell.env("HOME") + "/.config/ml4w/settings/editor.sh " + Quickshell.env("HOME") + "/.config/hypr/conf/keyboard.conf"])
                     }
                 }
                 ML4WMenuItem { 
                     text: qsTr("Monitors");
                     onClicked: { 
-                        Quickshell.execDetached(["nwg-displays"])
+                        Quickshell.execDetached(["bash", "-lc", Quickshell.env("HOME") + "/.config/ml4w/scripts/ml4w-run-setting " + Quickshell.env("HOME") + "/.config/ml4w/settings/monitor-manager.sh"])
                     }
                 }
                 ML4WMenuItem { 
@@ -116,7 +116,7 @@ FloatingWindow {
                 ML4WMenuItem { 
                     text: qsTr("Bluetooth");
                     onClicked: { 
-                        Quickshell.execDetached(["blueman-manager"])
+                        Quickshell.execDetached(["bash", "-lc", Quickshell.env("HOME") + "/.config/ml4w/scripts/ml4w-run-setting " + Quickshell.env("HOME") + "/.config/ml4w/settings/bluetooth.sh"])
                     }
                 }
                 ML4WMenuItem { 
@@ -128,7 +128,7 @@ FloatingWindow {
                 ML4WMenuItem { 
                     text: qsTr("Theme");
                     onClicked: { 
-                        Quickshell.execDetached(["nwg-look"])
+                        Quickshell.execDetached(["bash", "-lc", Quickshell.env("HOME") + "/.config/ml4w/scripts/ml4w-run-setting " + Quickshell.env("HOME") + "/.config/ml4w/settings/theme-gtk.sh"])
                     }
                 }
                 ML4WMenuSeparator {}
@@ -148,7 +148,7 @@ FloatingWindow {
                     text: root.isHyprlandSettingsInstalled ? qsTr("Hyprland Settings") : qsTr("Install Hyprland Settings")
                     onClicked: { 
                         if (root.isHyprlandSettingsInstalled) {
-                            Quickshell.execDetached(["bash","-c","flatpak run com.ml4w.hyprlandsettings"])
+                            Quickshell.execDetached(["bash", "-c", Quickshell.env("HOME") + "/.config/ml4w/scripts/ml4w-hyprland-settings run"])
                         } else {
                             Quickshell.execDetached(["bash", "-lc", Quickshell.env("HOME") + "/.config/ml4w/scripts/ml4w-open-terminal " + Quickshell.env("HOME") + "/.config/ml4w/scripts/ml4w-install-hyprlandsettings"])
                         }
