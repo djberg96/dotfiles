@@ -4,6 +4,9 @@
 CACHE_FOLDER="$HOME/.cache/ml4w/hyprland-dotfiles"
 CACHE_FILE="$CACHE_FOLDER/current_wallpaper"
 DEFAULT_WALLPAPER="$HOME/.config/ml4w/wallpapers/default.jpg"
+WELCOME_CACHE_DIR="$HOME/.cache/ml4w"
+WELCOME_AUTOSTART_DISABLED_FILE="$HOME/.cache/ml4w-welcome-autostart"
+WELCOME_SESSION_FILE="$WELCOME_CACHE_DIR/welcome-shown-${HYPRLAND_INSTANCE_SIGNATURE:-default}"
 
 # Colors for UI
 RED='\033[0;31m'
@@ -18,6 +21,7 @@ error() { echo -e "${RED}[ERROR]${NC} $1" >&2; }
 
 # Ensure that cache folder exists
 mkdir -p $HOME/.cache
+mkdir -p "$WELCOME_CACHE_DIR"
 
 # Set Wallpaper
 mkdir -p $CACHE_FOLDER
@@ -44,10 +48,13 @@ qs -p $HOME/.config/quickshell/overview &
 info "Quickshell Overview started"
 
 # Start ML4W Welcome App
-if [ ! -f $HOME/.cache/ml4w-welcome-autostart ]; then
+if [ ! -f "$WELCOME_AUTOSTART_DISABLED_FILE" ] && [ ! -f "$WELCOME_SESSION_FILE" ]; then
+    touch "$WELCOME_SESSION_FILE"
     sleep 3
-    qs ipc call welcome toggle
+    qs ipc call welcome open
     info "ML4W Welcome started"
-else
+elif [ -f "$WELCOME_AUTOSTART_DISABLED_FILE" ]; then
     info "ML4W Welcome disabled"
+else
+    info "ML4W Welcome already shown in this session"
 fi
