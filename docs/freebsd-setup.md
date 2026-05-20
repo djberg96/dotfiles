@@ -196,3 +196,30 @@ The most common first-run failures are:
 - launcher defaults still pointing to apps you do not have installed
 
 When in doubt, check `~/.config/ml4w/settings/` first before editing the QML or Hyprland config directly.
+
+## Recovering A Stuck Hyprland Session
+
+This fork now includes a small recovery helper:
+
+```sh
+~/.config/ml4w/scripts/ml4w-reset-hyprland
+```
+
+Run it from a TTY if Hyprland crashes with stale runtime or lockfile errors. It will:
+
+- stop common Hyprland session processes like `Hyprland`, `hyprlock`, `hypridle`, and `qs`
+- remove stale runtime state in `$XDG_RUNTIME_DIR/hypr` and `/tmp/hypr`
+
+If you want it to immediately relaunch Hyprland after cleanup:
+
+```sh
+~/.config/ml4w/scripts/ml4w-reset-hyprland --restart
+```
+
+If you suspect `hypridle` is part of the startup problem, you can do a one-shot minimal restart:
+
+```sh
+~/.config/ml4w/scripts/ml4w-reset-hyprland --restart --minimal
+```
+
+That temporarily comments out the `exec-once = hypridle` line in `~/.config/hypr/conf/autostart.conf` before relaunching, and saves a backup copy as `~/.config/hypr/conf/autostart.conf.disabled-hypridle`.

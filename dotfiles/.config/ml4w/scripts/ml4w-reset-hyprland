@@ -1,0 +1,134 @@
+#!/usr/bin/env bash
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "$SCRIPT_DIR/ml4w-platform"
+
+uid="$(id -u)"
+runtime_dir="${XDG_RUNTIME_DIR:-/var/run/user/$uid}"
+hypr_runtime_dir="$runtime_dir/hypr"
+tmp_hypr_dir="/tmp/hypr"
+
+restart_after_cleanup="false"
+minimal_after_cleanup="false"
+
+info() {
+    printf '%s\n' ":: $*"
+}
+
+warn() {
+    printf '%s\n' ":: Warning: $*" >&2
+}
+
+usage() {
+    cat <<'EOF'
+Usage: ml4w-reset-hyprland [--restart] [--minimal]
+
+Clean up a stuck Hyprland session by stopping common desktop processes and
+removing stale Hyprland runtime files.
+
+Options:
+  --restart  Start Hyprland again after cleanup.
+  --minimal  When used with --restart, temporarily skip hypridle for the next
+             launch by creating ~/.config/hypr/conf/autostart.conf.disabled-hypridle
+             from the current config.
+  -h, --help Show this help text.
+EOF
+}
+
+while [[ $# -gt 0 ]]; do
+    case "$1" in
+        --restart)
+            restart_after_cleanup="true"
+            ;;
+        --minimal)
+            minimal_after_cleanup="true"
+            ;;
+        -h|--help)
+            usage
+            exit 0
+            ;;
+        *)
+            warn "Unknown argument: $1"
+            usage
+            exit 1
+            ;;
+    esac
+    shift
+done
+
+if [[ "$minimal_after_cleanup" == "true" && "$restart_after_cleanup" != "true" ]]; then
+    warn "--minimal only makes sense together with --restart."
+fi
+
+stop_process() {
+    local name="$1"
+
+    if ! pgrep -x "$name" >/dev/null 2>&1; then
+        return 0
+    fi
+
+    info "Stopping $name"
+    pkill -x "$name" >/dev/null 2>&1 || true
+    sleep 0.3
+
+    if pgrep -x "$name" >/dev/null 2>&1; then
+        warn "$name is still running, forcing shutdown"
+        pkill -9 -x "$name" >/dev/null 2>&1 || true
+    fi
+}
+
+cleanup_path() {
+    local path="$1"
+
+    [[ -e "$path" ]] || return 0
+    info "Removing stale runtime path $path"
+    rm -rf "$path"
+}
+
+prepare_minimal_autostart() {
+    local autostart_file="$HOME/.config/hypr/conf/autostart.conf"
+    local disabled_marker="$HOME/.config/hypr/conf/autostart.conf.disabled-hypridle"
+
+    if [[ ! -f "$autostart_file" ]]; then
+        warn "Cannot prepare minimal mode because $autostart_file does not exist."
+        return 1
+    fi
+
+    cp "$autostart_file" "$disabled_marker"
+
+    if ml4w_command_exists perl; then
+        perl -0pi -e 's/^(\s*exec-once\s*=\s*hypridle\b)/# $1/m' "$autostart_file"
+    else
+        sed -i '' 's/^exec-once = hypridle/# exec-once = hypridle/' "$autostart_file"
+    fi
+
+    info "Temporarily disabled hypridle in $autostart_file"
+    info "Backup saved to $disabled_marker"
+}
+
+info "Resetting Hyprland runtime state"
+
+stop_process hyprlock
+stop_process hypridle
+stop_process hyprpaper
+stop_process waybar
+stop_process swaync
+stop_process qs
+stop_process xdg-desktop-portal-hyprland
+stop_process xdg-desktop-portal
+stop_process Hyprland
+
+cleanup_path "$hypr_runtime_dir"
+cleanup_path "$tmp_hypr_dir"
+
+if [[ "$restart_after_cleanup" == "true" ]]; then
+    if [[ "$minimal_after_cleanup" == "true" ]]; then
+        prepare_minimal_autostart
+    fi
+
+    info "Starting Hyprland"
+    exec Hyprland
+fi
+
+info "Cleanup complete"
+info "Start Hyprland again from this TTY when you are ready."
