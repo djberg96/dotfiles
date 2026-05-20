@@ -11,6 +11,7 @@ tmp_hypr_dir="/tmp/hypr"
 restart_after_cleanup="false"
 minimal_after_cleanup="false"
 restore_autostart="false"
+show_log="false"
 
 info() {
     printf '%s\n' ":: $*"
@@ -34,6 +35,7 @@ Options:
              Hyprland startup path.
   --restore-autostart
              Restore the autostart config backup created by --minimal.
+  --show-log Print the newest Hyprland log from the runtime directory.
   -h, --help Show this help text.
 EOF
 }
@@ -48,6 +50,9 @@ while [[ $# -gt 0 ]]; do
             ;;
         --restore-autostart)
             restore_autostart="true"
+            ;;
+        --show-log)
+            show_log="true"
             ;;
         -h|--help)
             usage
@@ -73,6 +78,11 @@ fi
 
 if [[ "$restore_autostart" == "true" && "$minimal_after_cleanup" == "true" ]]; then
     warn "--restore-autostart cannot be combined with --restart or --minimal."
+    exit 1
+fi
+
+if [[ "$show_log" == "true" && ( "$restart_after_cleanup" == "true" || "$minimal_after_cleanup" == "true" || "$restore_autostart" == "true" ) ]]; then
+    warn "--show-log cannot be combined with other options."
     exit 1
 fi
 
@@ -104,6 +114,8 @@ cleanup_path() {
 prepare_minimal_autostart() {
     local autostart_file="$HOME/.config/hypr/conf/autostart.conf"
     local backup_file="$HOME/.config/hypr/conf/autostart.conf.pre-ml4w-safe"
+    local monitor_file="$HOME/.config/hypr/conf/monitor.conf"
+    local monitor_backup="$HOME/.config/hypr/conf/monitor.conf.pre-ml4w-safe"
 
     if [[ ! -f "$autostart_file" ]]; then
         warn "Cannot prepare minimal mode because $autostart_file does not exist."
@@ -117,6 +129,7 @@ prepare_minimal_autostart() {
             s/^(\s*exec-once\s*=\s*~\/\.config\/ml4w\/listeners\.sh\b)/# $1/m;
             s/^(\s*exec-once\s*=\s*~\/\.config\/ml4w\/scripts\/ml4w-wallpaper-app\b)/# $1/m;
             s/^(\s*exec-once\s*=\s*~\/\.config\/ml4w\/scripts\/ml4w-autostart\b)/# $1/m;
+            s/^(\s*exec-once\s*=\s*~\/\.config\/hypr\/scripts\/gtk\.sh\b)/# $1/m;
             s/^(\s*exec-once\s*=\s*swaync\b)/# $1/m;
             s/^(\s*exec-once\s*=\s*hypridle\b)/# $1/m;
             s/^(\s*exec-once\s*=\s*wl-paste\b)/# $1/m;
@@ -128,12 +141,22 @@ prepare_minimal_autostart() {
             -e 's#^exec-once=~/.config/ml4w/listeners\.sh#& disabled-by-ml4w-reset-hyprland\n# exec-once=~/.config/ml4w/listeners.sh#' \
             -e 's#^exec-once = ~/.config/ml4w/scripts/ml4w-wallpaper-app#& disabled-by-ml4w-reset-hyprland\n# exec-once = ~/.config/ml4w/scripts/ml4w-wallpaper-app#' \
             -e 's#^exec-once = ~/.config/ml4w/scripts/ml4w-autostart#& disabled-by-ml4w-reset-hyprland\n# exec-once = ~/.config/ml4w/scripts/ml4w-autostart#' \
+            -e 's#^exec-once = ~/.config/hypr/scripts/gtk\.sh#& disabled-by-ml4w-reset-hyprland\n# exec-once = ~/.config/hypr/scripts/gtk.sh#' \
             -e 's#^exec-once = swaync#& disabled-by-ml4w-reset-hyprland\n# exec-once = swaync#' \
             -e 's#^exec-once = hypridle#& disabled-by-ml4w-reset-hyprland\n# exec-once = hypridle#' \
             -e 's#^exec-once = wl-paste#& disabled-by-ml4w-reset-hyprland\n# exec-once = wl-paste#' \
             -e 's#^exec-once = ~/.config/hypr/scripts/cleanup\.sh#& disabled-by-ml4w-reset-hyprland\n# exec-once = ~/.config/hypr/scripts/cleanup.sh#' \
             -e 's#^exec = ~/.config/com\.ml4w\.hyprlandsettings/hyprctl\.sh#& disabled-by-ml4w-reset-hyprland\n# exec = ~/.config/com.ml4w.hyprlandsettings/hyprctl.sh#' \
             "$autostart_file"
+    fi
+
+    if [[ -f "$monitor_file" ]]; then
+        cp "$monitor_file" "$monitor_backup"
+        printf '%s\n' 'source = ~/.config/hypr/conf/monitors/default.conf' > "$monitor_file"
+        info "Prepared fallback monitor config in $monitor_file"
+        info "Backup saved to $monitor_backup"
+    else
+        warn "No monitor config found at $monitor_file"
     fi
 
     info "Prepared minimal startup mode in $autostart_file"
@@ -143,6 +166,8 @@ prepare_minimal_autostart() {
 restore_autostart_backup() {
     local autostart_file="$HOME/.config/hypr/conf/autostart.conf"
     local backup_file="$HOME/.config/hypr/conf/autostart.conf.pre-ml4w-safe"
+    local monitor_file="$HOME/.config/hypr/conf/monitor.conf"
+    local monitor_backup="$HOME/.config/hypr/conf/monitor.conf.pre-ml4w-safe"
 
     if [[ ! -f "$backup_file" ]]; then
         warn "No autostart backup found at $backup_file"
@@ -151,10 +176,47 @@ restore_autostart_backup() {
 
     cp "$backup_file" "$autostart_file"
     info "Restored $autostart_file from $backup_file"
+
+    if [[ -f "$monitor_backup" ]]; then
+        cp "$monitor_backup" "$monitor_file"
+        info "Restored $monitor_file from $monitor_backup"
+    fi
+}
+
+show_latest_log() {
+    local newest_dir
+    local log_file
+
+    if [[ ! -d "$hypr_runtime_dir" ]]; then
+        warn "No Hyprland runtime directory found at $hypr_runtime_dir"
+        return 1
+    fi
+
+    newest_dir="$(find "$hypr_runtime_dir" -mindepth 1 -maxdepth 1 -type d -print 2>/dev/null | xargs ls -td 2>/dev/null | head -n 1)"
+
+    if [[ -z "$newest_dir" ]]; then
+        warn "No Hyprland session directories were found in $hypr_runtime_dir"
+        return 1
+    fi
+
+    log_file="$newest_dir/hyprland.log"
+
+    if [[ ! -f "$log_file" ]]; then
+        warn "No hyprland.log found at $log_file"
+        return 1
+    fi
+
+    info "Showing log: $log_file"
+    cat "$log_file"
 }
 
 if [[ "$restore_autostart" == "true" ]]; then
     restore_autostart_backup
+    exit $?
+fi
+
+if [[ "$show_log" == "true" ]]; then
+    show_latest_log
     exit $?
 fi
 
