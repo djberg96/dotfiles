@@ -201,12 +201,14 @@
     // CPU
     "cpu": {
         "format": "/ C {usage}% ",
+        "tooltip-format": "CPU usage: {usage}%",
         "on-click": "~/.config/ml4w/settings/system-monitor.sh"
     },
 
     // Memory
     "memory": {
         "format": "/ M {}% ",
+        "tooltip-format": "Memory used: {used} / {total}",
         "on-click": "~/.config/ml4w/settings/system-monitor.sh"
     },
 
@@ -214,6 +216,7 @@
     "disk": {
         "interval": 30,
         "format": "D {percentage_used}% ",
+        "tooltip-format": "Root filesystem (/): {used} used of {total}",
         "path": "/",
         "on-click": "~/.config/ml4w/settings/system-monitor.sh"
     },
@@ -288,6 +291,8 @@
         "format-charging": " {capacity}%",
         "format-plugged": " {capacity}%",
         "format-alt": "{icon} {time}",
+        "tooltip-format": "Battery: {capacity}%\nTime remaining: {time}\nLeft click: Power menu",
+        "on-click": "qs ipc call power toggle",
         // "format-good": "", // An empty format will hide the module
         // "format-full": "",
         "format-icons": [" ", " ", " ", " ", " "]

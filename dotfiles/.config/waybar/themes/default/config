@@ -84,21 +84,27 @@
     },
     "cpu": {
         "format": "{usage}% ",
-        "tooltip": false
+        "tooltip-format": "CPU usage: {usage}%",
+        "on-click": "~/.config/ml4w/settings/system-monitor.sh"
     },
     "memory": {
-        "format": "{}% "
+        "format": "{}% ",
+        "tooltip-format": "Memory used: {used} / {total}",
+        "on-click": "~/.config/ml4w/settings/system-monitor.sh"
     },
     "temperature": {
         "critical-threshold": 80,
         // "format-critical": "{temperatureC}°C {icon}",
         "format": "{temperatureC}°C {icon}",
-        "format-icons": ["", "", ""]
+        "format-icons": ["", "", ""],
+        "tooltip-format": "System temperature: {temperatureC}°C",
+        "on-click": "~/.config/ml4w/settings/system-monitor.sh"
     },
     "backlight": {
         // "device": "acpi_video1",
         "format": "{percent}% {icon}",
-        "format-icons": ["", "", "", "", "", "", "", "", ""]
+        "format-icons": ["", "", "", "", "", "", "", "", ""],
+        "tooltip-format": "Brightness: {percent}%"
     },
     "battery": {
         "states": {
@@ -110,6 +116,8 @@
         "format-charging": "{capacity}% ",
         "format-plugged": "{capacity}% ",
         "format-alt": "{time} {icon}",
+        "tooltip-format": "Battery: {capacity}%\nTime remaining: {time}\nLeft click: Power menu",
+        "on-click": "qs ipc call power toggle",
         // "format-good": "", // An empty format will hide the module
         // "format-full": "",
         "format-icons": ["", "", "", "", ""]
@@ -158,4 +166,3 @@
         // "exec": "$HOME/.config/waybar/mediaplayer.py --player spotify 2> /dev/null" // Filter player based on name
     }
 }
-
