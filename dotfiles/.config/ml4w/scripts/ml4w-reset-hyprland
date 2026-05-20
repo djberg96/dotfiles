@@ -10,6 +10,7 @@ tmp_hypr_dir="/tmp/hypr"
 
 restart_after_cleanup="false"
 minimal_after_cleanup="false"
+restore_autostart="false"
 
 info() {
     printf '%s\n' ":: $*"
@@ -28,9 +29,11 @@ removing stale Hyprland runtime files.
 
 Options:
   --restart  Start Hyprland again after cleanup.
-  --minimal  When used with --restart, temporarily skip hypridle for the next
-             launch by creating ~/.config/hypr/conf/autostart.conf.disabled-hypridle
-             from the current config.
+  --minimal  When used with --restart, temporarily disable most ML4W desktop
+             autostart extras for the next launch and keep only a minimal
+             Hyprland startup path.
+  --restore-autostart
+             Restore the autostart config backup created by --minimal.
   -h, --help Show this help text.
 EOF
 }
@@ -42,6 +45,9 @@ while [[ $# -gt 0 ]]; do
             ;;
         --minimal)
             minimal_after_cleanup="true"
+            ;;
+        --restore-autostart)
+            restore_autostart="true"
             ;;
         -h|--help)
             usage
@@ -58,6 +64,16 @@ done
 
 if [[ "$minimal_after_cleanup" == "true" && "$restart_after_cleanup" != "true" ]]; then
     warn "--minimal only makes sense together with --restart."
+fi
+
+if [[ "$restore_autostart" == "true" && "$restart_after_cleanup" == "true" ]]; then
+    warn "--restore-autostart cannot be combined with --restart or --minimal."
+    exit 1
+fi
+
+if [[ "$restore_autostart" == "true" && "$minimal_after_cleanup" == "true" ]]; then
+    warn "--restore-autostart cannot be combined with --restart or --minimal."
+    exit 1
 fi
 
 stop_process() {
@@ -87,24 +103,60 @@ cleanup_path() {
 
 prepare_minimal_autostart() {
     local autostart_file="$HOME/.config/hypr/conf/autostart.conf"
-    local disabled_marker="$HOME/.config/hypr/conf/autostart.conf.disabled-hypridle"
+    local backup_file="$HOME/.config/hypr/conf/autostart.conf.pre-ml4w-safe"
 
     if [[ ! -f "$autostart_file" ]]; then
         warn "Cannot prepare minimal mode because $autostart_file does not exist."
         return 1
     fi
 
-    cp "$autostart_file" "$disabled_marker"
+    cp "$autostart_file" "$backup_file"
 
     if ml4w_command_exists perl; then
-        perl -0pi -e 's/^(\s*exec-once\s*=\s*hypridle\b)/# $1/m' "$autostart_file"
+        perl -0pi -e '
+            s/^(\s*exec-once\s*=\s*~\/\.config\/ml4w\/listeners\.sh\b)/# $1/m;
+            s/^(\s*exec-once\s*=\s*~\/\.config\/ml4w\/scripts\/ml4w-wallpaper-app\b)/# $1/m;
+            s/^(\s*exec-once\s*=\s*~\/\.config\/ml4w\/scripts\/ml4w-autostart\b)/# $1/m;
+            s/^(\s*exec-once\s*=\s*swaync\b)/# $1/m;
+            s/^(\s*exec-once\s*=\s*hypridle\b)/# $1/m;
+            s/^(\s*exec-once\s*=\s*wl-paste\b)/# $1/m;
+            s/^(\s*exec-once\s*=\s*~\/\.config\/hypr\/scripts\/cleanup\.sh\b)/# $1/m;
+            s/^(\s*exec\s*=\s*~\/\.config\/com\.ml4w\.hyprlandsettings\/hyprctl\.sh\b)/# $1/m;
+        ' "$autostart_file"
     else
-        sed -i '' 's/^exec-once = hypridle/# exec-once = hypridle/' "$autostart_file"
+        sed -i '' \
+            -e 's#^exec-once=~/.config/ml4w/listeners\.sh#& disabled-by-ml4w-reset-hyprland\n# exec-once=~/.config/ml4w/listeners.sh#' \
+            -e 's#^exec-once = ~/.config/ml4w/scripts/ml4w-wallpaper-app#& disabled-by-ml4w-reset-hyprland\n# exec-once = ~/.config/ml4w/scripts/ml4w-wallpaper-app#' \
+            -e 's#^exec-once = ~/.config/ml4w/scripts/ml4w-autostart#& disabled-by-ml4w-reset-hyprland\n# exec-once = ~/.config/ml4w/scripts/ml4w-autostart#' \
+            -e 's#^exec-once = swaync#& disabled-by-ml4w-reset-hyprland\n# exec-once = swaync#' \
+            -e 's#^exec-once = hypridle#& disabled-by-ml4w-reset-hyprland\n# exec-once = hypridle#' \
+            -e 's#^exec-once = wl-paste#& disabled-by-ml4w-reset-hyprland\n# exec-once = wl-paste#' \
+            -e 's#^exec-once = ~/.config/hypr/scripts/cleanup\.sh#& disabled-by-ml4w-reset-hyprland\n# exec-once = ~/.config/hypr/scripts/cleanup.sh#' \
+            -e 's#^exec = ~/.config/com\.ml4w\.hyprlandsettings/hyprctl\.sh#& disabled-by-ml4w-reset-hyprland\n# exec = ~/.config/com.ml4w.hyprlandsettings/hyprctl.sh#' \
+            "$autostart_file"
     fi
 
-    info "Temporarily disabled hypridle in $autostart_file"
-    info "Backup saved to $disabled_marker"
+    info "Prepared minimal startup mode in $autostart_file"
+    info "Backup saved to $backup_file"
 }
+
+restore_autostart_backup() {
+    local autostart_file="$HOME/.config/hypr/conf/autostart.conf"
+    local backup_file="$HOME/.config/hypr/conf/autostart.conf.pre-ml4w-safe"
+
+    if [[ ! -f "$backup_file" ]]; then
+        warn "No autostart backup found at $backup_file"
+        return 1
+    fi
+
+    cp "$backup_file" "$autostart_file"
+    info "Restored $autostart_file from $backup_file"
+}
+
+if [[ "$restore_autostart" == "true" ]]; then
+    restore_autostart_backup
+    exit $?
+fi
 
 info "Resetting Hyprland runtime state"
 

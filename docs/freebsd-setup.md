@@ -222,4 +222,10 @@ If you suspect `hypridle` is part of the startup problem, you can do a one-shot 
 ~/.config/ml4w/scripts/ml4w-reset-hyprland --restart --minimal
 ```
 
-That temporarily comments out the `exec-once = hypridle` line in `~/.config/hypr/conf/autostart.conf` before relaunching, and saves a backup copy as `~/.config/hypr/conf/autostart.conf.disabled-hypridle`.
+That temporarily switches `~/.config/hypr/conf/autostart.conf` into a much smaller startup mode before relaunching. It disables ML4W autostart extras such as Quickshell startup, `swaync`, `hypridle`, wallpaper restore, cliphist watching, listeners, and the Hyprland Settings hook, then saves a backup as `~/.config/hypr/conf/autostart.conf.pre-ml4w-safe`.
+
+To restore the original autostart file later:
+
+```sh
+~/.config/ml4w/scripts/ml4w-reset-hyprland --restore-autostart
+```
