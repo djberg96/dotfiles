@@ -11,6 +11,8 @@ mkdir -p "$STATE_DIR"
 backend() {
     if ml4w_command_exists brightnessctl; then
         echo "brightnessctl"
+    elif ml4w_command_exists backlight; then
+        echo "backlight"
     elif ml4w_command_exists light; then
         echo "light"
     elif ml4w_command_exists brillo; then
@@ -24,6 +26,9 @@ get_value() {
     case "$(backend)" in
         brightnessctl)
             brightnessctl -m | awk -F, '{gsub("%","",$4); print int($4 + 0)}'
+            ;;
+        backlight)
+            backlight -q 2>/dev/null | awk -F': ' '{print int($2 + 0)}'
             ;;
         light)
             light -G | awk '{print int($1 + 0.5)}'
@@ -58,6 +63,9 @@ set_value() {
         brightnessctl)
             brightnessctl -q s "${value}%"
             ;;
+        backlight)
+            backlight "${value}%"
+            ;;
         light)
             light -S "$value"
             ;;
@@ -80,6 +88,13 @@ adjust_value() {
                 brightnessctl -q s "+${step}%"
             else
                 brightnessctl -q s "${step}%-"
+            fi
+            ;;
+        backlight)
+            if [[ "$direction" == "up" ]]; then
+                backlight incr "$step"
+            else
+                backlight decr "$step"
             fi
             ;;
         light)
@@ -112,6 +127,11 @@ save_and_dim() {
         return 0
     fi
 
+    if ml4w_command_exists backlight; then
+        backlight 10%
+        return 0
+    fi
+
     set_value 10
 }
 
@@ -123,6 +143,11 @@ restore_value() {
 
     if ml4w_command_exists brightnessctl; then
         brightnessctl -q -r >/dev/null 2>&1 || true
+        return 0
+    fi
+
+    if ml4w_command_exists backlight && [[ -f "$STATE_FILE" ]]; then
+        backlight "$(cat "$STATE_FILE")%"
     fi
 }
 

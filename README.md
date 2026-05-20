@@ -31,6 +31,8 @@ This fork also adjusts several maintenance helpers for FreeBSD. The SDDM helper 
 
 This fork also moves more UI launch points onto configurable commands under `~/.config/ml4w/settings/`, including editor, monitor manager, GTK/Qt theme tools, Hyprland Settings, Bluetooth, calculator, file manager, and system monitor launchers. That makes it much easier to retarget the desktop toward FreeBSD-native package choices without editing QML or Waybar files directly.
 
+For a practical package/install checklist, see [docs/freebsd-setup.md](/Users/dberger/Dev/dotfiles/docs/freebsd-setup.md).
+
 ### Test and install with the ML4W OS Live ISO
 
 Test the ML4W OS without risk on your computer or in a Virtual Machine with the ML4W Live ISO.
