@@ -372,7 +372,7 @@ PanelWindow {
                                 value: 100
 
                                 Process {
-                                    command: ["bash", "-c", "brightnessctl -m | awk -F, '{gsub(\"%\",\"\",$4); print $4}'"]
+                                    command: ["bash", "-lc", "~/.config/ml4w/scripts/ml4w-brightness get"]
                                     running: root.isOpen
                                     stdout: StdioCollector {
                                         onStreamFinished: {
@@ -383,7 +383,7 @@ PanelWindow {
                                 }
 
                                 onMoved: {
-                                    Quickshell.execDetached(["bash", "-c", "brightnessctl set " + Math.round(value) + "%"])
+                                    Quickshell.execDetached(["bash", "-lc", "~/.config/ml4w/scripts/ml4w-brightness set " + Math.round(value)])
                                 }
 
                                 background: Rectangle {

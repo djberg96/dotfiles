@@ -21,6 +21,12 @@ bash <(curl -s https://ml4w.com/os/rolling) # Rolling Release
 ```
 Arch, Fedora and openSuse Tumblweed are directly supported.
 
+## FreeBSD 15 Notes
+
+This fork now includes a small compatibility layer to reduce Linux-specific assumptions in the runtime dotfiles. In particular, Hyprland autostart, power actions, lock handling, brightness helpers, update scripts, and network launchers now fall back more gracefully on FreeBSD.
+
+FreeBSD support should still be considered experimental. The desktop stack itself still depends on FreeBSD packages for Hyprland, Waybar, SwayNC, Quickshell, clipboard tools, portals, and related Wayland utilities being installed separately, and some Linux-focused utilities may still need local customization through files in `~/.config/ml4w/settings/`.
+
 ### Test and install with the ML4W OS Live ISO
 
 Test the ML4W OS without risk on your computer or in a Virtual Machine with the ML4W Live ISO.

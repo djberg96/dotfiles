@@ -85,6 +85,13 @@ if [[ $(_checkCommandExists "pacman") == 0 ]]; then
 # Fedora
 elif [[ $(_checkCommandExists "dnf") == 0 ]]; then
     sudo dnf upgrade
+# FreeBSD
+elif [[ $(_checkCommandExists "pkg") == 0 ]]; then
+    sudo pkg upgrade
+    if [[ $(_checkCommandExists "freebsd-update") == 0 ]]; then
+        echo
+        echo ":: To update the FreeBSD base system as well, run: sudo freebsd-update fetch install"
+    fi
 else
     echo ":: ERROR - Platform not supported"
     echo "Press [ENTER] to close."

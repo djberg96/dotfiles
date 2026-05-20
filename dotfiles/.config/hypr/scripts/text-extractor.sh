@@ -21,29 +21,8 @@ check_deps() {
   fi
 }
 
-# Check if command exists
-_checkCommandExists() {
-    cmd="$1"
-    if ! command -v "$cmd" >/dev/null; then
-        echo 1
-        return
-    fi
-    echo 0
-    return
-}
-
 check_deps
-
-# Arch
-if [[ $(_checkCommandExists "pacman") == 0 ]]; then
-    OCR_LANGUAGE_LIST="$(pacman -Qq | grep -iE "tesseract-(ocr|data|langpack)*-" | awk -F '-' '{print $NF}')"
-# Fedora
-elif [[ $(_checkCommandExists "dnf") == 0 ]]; then
-    OCR_LANGUAGE_LIST="$(dnf list --installed | grep -iE "tesseract-(ocr|data|langpack)*-" | awk -F '-' '{print $NF}')"
-# Opensuse
-else
-    OCR_LANGUAGE_LIST="$(zypper se -i | grep -iE "tesseract-(ocr|data|langpack)*-" | awk -F '-' '{print $NF}')"
-fi
+OCR_LANGUAGE_LIST="$(tesseract --list-langs 2>/dev/null | tail -n +2)"
 
 argc() { echo $#; }
 rofi_cmd() {

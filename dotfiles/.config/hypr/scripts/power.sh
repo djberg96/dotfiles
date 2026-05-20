@@ -34,7 +34,7 @@ terminate_clients() {
 
 		echo ":: PID $pid has terminated."
 	done
-	bash $home/.config/ml4w/listeners.sh --stopall
+	bash "$HOME/.config/ml4w/listeners.sh" --stopall
 }
 
 if [[ "$1" == "exit" ]]; then
@@ -48,31 +48,31 @@ fi
 if [[ "$1" == "lock" ]]; then
 	echo ":: Lock"
 	sleep 0.5
-	hyprlock
+	"$HOME/.config/ml4w/scripts/ml4w-session" lock
 fi
 
 if [[ "$1" == "reboot" ]]; then
 	echo ":: Reboot"
 	terminate_clients
 	sleep 0.5
-	systemctl reboot
+	"$HOME/.config/ml4w/scripts/ml4w-session" reboot
 fi
 
 if [[ "$1" == "shutdown" ]]; then
 	echo ":: Shutdown"
 	terminate_clients
 	sleep 0.5
-	systemctl poweroff
+	"$HOME/.config/ml4w/scripts/ml4w-session" poweroff
 fi
 
 if [[ "$1" == "suspend" ]]; then
 	echo ":: Suspend"
 	sleep 0.5
-	systemctl suspend
+	"$HOME/.config/ml4w/scripts/ml4w-session" suspend
 fi
 
 if [[ "$1" == "hibernate" ]]; then
 	echo ":: Hibernate"
 	sleep 1
-	systemctl hibernate
+	"$HOME/.config/ml4w/scripts/ml4w-session" hibernate
 fi

@@ -1,0 +1,28 @@
+#!/usr/bin/env bash
+
+ml4w_os() {
+    uname -s 2>/dev/null || printf '%s\n' "Unknown"
+}
+
+ml4w_is_freebsd() {
+    [[ "$(ml4w_os)" == "FreeBSD" ]]
+}
+
+ml4w_command_exists() {
+    command -v "$1" >/dev/null 2>&1
+}
+
+ml4w_read_setting() {
+    local file="$1"
+
+    [[ -f "$file" ]] || return 1
+    tr -d '\r' < "$file"
+}
+
+ml4w_try_command() {
+    local command_line="$1"
+    local binary="${command_line%% *}"
+
+    ml4w_command_exists "$binary" || return 127
+    eval "$command_line"
+}

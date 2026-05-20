@@ -66,8 +66,8 @@
           "label": "",
           "type": "toggle",
           "active": true,
-          "command": "sh -c '[[ $SWAYNC_TOGGLE_STATE == true ]] && nmcli radio wifi on || nmcli radio wifi off'",
-          "update-command": "sh -c '[[ $(nmcli r wifi) == \"enabled\" ]] && echo true || echo false'"
+          "command": "~/.config/ml4w/scripts/ml4w-network toggle-wifi",
+          "update-command": "~/.config/ml4w/scripts/ml4w-network wifi-state"
         },
         {
           "label": "",
@@ -85,7 +85,7 @@
         },
         {
           "label": "",
-          "command": "hyprlock"
+          "command": "~/.config/ml4w/scripts/ml4w-session lock"
         }
       ]
     }

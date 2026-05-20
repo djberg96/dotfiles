@@ -1,19 +1,83 @@
 #!/usr/bin/env bash
 
+# shellcheck source=/dev/null
+source "$HOME/.config/ml4w/scripts/ml4w-platform"
+
+SETTINGS_FILE="$HOME/.config/ml4w/settings/networkmanager.sh"
 SERVICE="NetworkManager"
 
-if systemctl is-active --quiet "$SERVICE"; then
-    echo "✅ $SERVICE is already running."
-    nmtui
-else
+open_network_ui() {
+    local configured_command=""
+
+    configured_command="$(ml4w_read_setting "$SETTINGS_FILE" 2>/dev/null || true)"
+    if [[ -n "$configured_command" && "$configured_command" != *"ml4w-network"* ]]; then
+        eval "$configured_command"
+        return $?
+    fi
+
+    if ml4w_command_exists nmtui; then
+        nmtui
+        return 0
+    fi
+
+    echo "❌ No supported network manager UI was found."
+    return 1
+}
+
+toggle_wifi() {
+    ml4w_command_exists nmcli || exit 0
+
+    if [[ "${SWAYNC_TOGGLE_STATE:-false}" == "true" ]]; then
+        nmcli radio wifi on
+    else
+        nmcli radio wifi off
+    fi
+}
+
+wifi_state() {
+    if ml4w_command_exists nmcli && [[ "$(nmcli r wifi 2>/dev/null)" == "enabled" ]]; then
+        echo true
+    else
+        echo false
+    fi
+}
+
+open_network_manager() {
+    if ! ml4w_command_exists systemctl; then
+        open_network_ui
+        return $?
+    fi
+
+    if systemctl is-active --quiet "$SERVICE"; then
+        open_network_ui
+        return $?
+    fi
+
     echo "⚠️  $SERVICE is not running. Attempting to start it..."
     sudo systemctl enable "$SERVICE"
     sudo systemctl start "$SERVICE"
+
     if systemctl is-active --quiet "$SERVICE"; then
         echo "✅ $SERVICE was successfully started."
-        nmtui
+        open_network_ui
     else
-        echo "❌ Failed to start $SERVICE. You may need to check 'journalctl -xe' for errors."
+        echo "❌ Failed to start $SERVICE."
         exit 1
     fi
-fi
+}
+
+case "${1:-open}" in
+    open)
+        open_network_manager
+        ;;
+    toggle-wifi)
+        toggle_wifi
+        ;;
+    wifi-state)
+        wifi_state
+        ;;
+    *)
+        echo "Usage: $0 {open|toggle-wifi|wifi-state}" >&2
+        exit 1
+        ;;
+esac

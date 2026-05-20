@@ -134,11 +134,11 @@ PanelWindow {
                 }
             }
 
-            PowerButton { iconTxt: ""; cmd: "pidof hyprlock || hyprlock" }
-            PowerButton { iconTxt: ""; cmd: "systemctl suspend" }
+            PowerButton { iconTxt: ""; cmd: "~/.config/ml4w/scripts/ml4w-session lock" }
+            PowerButton { iconTxt: ""; cmd: "~/.config/ml4w/scripts/ml4w-session suspend" }
             PowerButton { iconTxt: ""; cmd: "hyprctl dispatch exit" }
-            PowerButton { iconTxt: ""; cmd: "systemctl reboot" }
-            PowerButton { iconTxt: ""; cmd: "systemctl poweroff" }
+            PowerButton { iconTxt: ""; cmd: "~/.config/ml4w/scripts/ml4w-session reboot" }
+            PowerButton { iconTxt: ""; cmd: "~/.config/ml4w/scripts/ml4w-session poweroff" }
         }
     }
 }

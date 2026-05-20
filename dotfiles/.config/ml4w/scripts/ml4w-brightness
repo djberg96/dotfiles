@@ -1,0 +1,170 @@
+#!/usr/bin/env bash
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "$SCRIPT_DIR/ml4w-platform"
+
+STATE_DIR="${XDG_CACHE_HOME:-$HOME/.cache}/ml4w"
+STATE_FILE="$STATE_DIR/brightness"
+
+mkdir -p "$STATE_DIR"
+
+backend() {
+    if ml4w_command_exists brightnessctl; then
+        echo "brightnessctl"
+    elif ml4w_command_exists light; then
+        echo "light"
+    elif ml4w_command_exists brillo; then
+        echo "brillo"
+    else
+        echo "none"
+    fi
+}
+
+get_value() {
+    case "$(backend)" in
+        brightnessctl)
+            brightnessctl -m | awk -F, '{gsub("%","",$4); print int($4 + 0)}'
+            ;;
+        light)
+            light -G | awk '{print int($1 + 0.5)}'
+            ;;
+        brillo)
+            brillo -G | awk '{print int($1 + 0.5)}'
+            ;;
+        *)
+            echo 100
+            ;;
+    esac
+}
+
+clamp_value() {
+    local value="$1"
+
+    if (( value < 1 )); then
+        value=1
+    fi
+    if (( value > 100 )); then
+        value=100
+    fi
+
+    echo "$value"
+}
+
+set_value() {
+    local value
+    value="$(clamp_value "${1%%%}")"
+
+    case "$(backend)" in
+        brightnessctl)
+            brightnessctl -q s "${value}%"
+            ;;
+        light)
+            light -S "$value"
+            ;;
+        brillo)
+            brillo -S "$value"
+            ;;
+        *)
+            return 0
+            ;;
+    esac
+}
+
+adjust_value() {
+    local direction="$1"
+    local step="${2:-10}"
+
+    case "$(backend)" in
+        brightnessctl)
+            if [[ "$direction" == "up" ]]; then
+                brightnessctl -q s "+${step}%"
+            else
+                brightnessctl -q s "${step}%-"
+            fi
+            ;;
+        light)
+            if [[ "$direction" == "up" ]]; then
+                light -A "$step"
+            else
+                light -U "$step"
+            fi
+            ;;
+        brillo)
+            if [[ "$direction" == "up" ]]; then
+                brillo -A "$step"
+            else
+                brillo -U "$step"
+            fi
+            ;;
+        *)
+            return 0
+            ;;
+    esac
+}
+
+save_and_dim() {
+    local current
+    current="$(get_value)"
+    echo "$current" > "$STATE_FILE"
+
+    if ml4w_command_exists brightnessctl; then
+        brightnessctl -q -s set 10%
+        return 0
+    fi
+
+    set_value 10
+}
+
+restore_value() {
+    if [[ -f "$STATE_FILE" ]]; then
+        set_value "$(cat "$STATE_FILE")"
+        return 0
+    fi
+
+    if ml4w_command_exists brightnessctl; then
+        brightnessctl -q -r >/dev/null 2>&1 || true
+    fi
+}
+
+adjust_keyboard_backlight() {
+    local direction="$1"
+
+    ml4w_command_exists brightnessctl || return 0
+
+    if [[ "$direction" == "up" ]]; then
+        brightnessctl -q -d smc::kbd_backlight s +10 >/dev/null 2>&1 || true
+    else
+        brightnessctl -q -d smc::kbd_backlight s 10- >/dev/null 2>&1 || true
+    fi
+}
+
+case "$1" in
+    get)
+        get_value
+        ;;
+    set)
+        set_value "${2:-100}"
+        ;;
+    up)
+        adjust_value up "${2:-10}"
+        ;;
+    down)
+        adjust_value down "${2:-10}"
+        ;;
+    save-min)
+        save_and_dim
+        ;;
+    restore)
+        restore_value
+        ;;
+    kbd-up)
+        adjust_keyboard_backlight up
+        ;;
+    kbd-down)
+        adjust_keyboard_backlight down
+        ;;
+    *)
+        echo "Usage: $0 {get|set <percent>|up [step]|down [step]|save-min|restore|kbd-up|kbd-down}" >&2
+        exit 1
+        ;;
+esac

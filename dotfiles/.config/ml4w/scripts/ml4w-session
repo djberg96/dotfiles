@@ -1,0 +1,118 @@
+#!/usr/bin/env bash
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "$SCRIPT_DIR/ml4w-platform"
+
+run_first_supported() {
+    local command_line
+
+    for command_line in "$@"; do
+        if ml4w_try_command "$command_line"; then
+            return 0
+        fi
+    done
+
+    echo ":: No supported command was found for this action." >&2
+    return 1
+}
+
+start_polkit_agent() {
+    local candidates=(
+        "/usr/lib/polkit-gnome/polkit-gnome-authentication-agent-1"
+        "/usr/libexec/polkit-gnome-authentication-agent-1"
+        "/usr/local/libexec/polkit-gnome-authentication-agent-1"
+        "/usr/local/lib/polkit-gnome/polkit-gnome-authentication-agent-1"
+        "/usr/libexec/lxqt-policykit-agent"
+        "/usr/local/libexec/lxqt-policykit-agent"
+    )
+    local candidate
+
+    for candidate in "${candidates[@]}"; do
+        if [[ -x "$candidate" ]]; then
+            exec "$candidate"
+        fi
+    done
+
+    for candidate in polkit-gnome-authentication-agent-1 lxqt-policykit-agent mate-polkit; do
+        if ml4w_command_exists "$candidate"; then
+            exec "$candidate"
+        fi
+    done
+
+    exit 0
+}
+
+update_dbus_env() {
+    ml4w_command_exists dbus-update-activation-environment || return 0
+
+    dbus-update-activation-environment --systemd "$@" 2>/dev/null \
+        || dbus-update-activation-environment "$@"
+}
+
+lock_screen() {
+    if ml4w_command_exists hyprlock; then
+        pgrep -x hyprlock >/dev/null 2>&1 || hyprlock
+        return 0
+    fi
+
+    ml4w_command_exists loginctl && loginctl lock-session
+}
+
+lock_session() {
+    if ml4w_command_exists loginctl; then
+        loginctl lock-session || lock_screen
+        return 0
+    fi
+
+    lock_screen
+}
+
+case "$1" in
+    start-polkit-agent)
+        start_polkit_agent
+        ;;
+    dbus-update-env)
+        shift
+        update_dbus_env "$@"
+        ;;
+    lock)
+        lock_screen
+        ;;
+    lock-session)
+        lock_session
+        ;;
+    reboot)
+        run_first_supported \
+            "systemctl reboot" \
+            "loginctl reboot" \
+            "shutdown -r now" \
+            "sudo shutdown -r now"
+        ;;
+    poweroff)
+        run_first_supported \
+            "systemctl poweroff" \
+            "loginctl poweroff" \
+            "shutdown -p now" \
+            "sudo shutdown -p now"
+        ;;
+    suspend)
+        run_first_supported \
+            "systemctl suspend" \
+            "loginctl suspend" \
+            "zzz" \
+            "acpiconf -s 3" \
+            "sudo acpiconf -s 3"
+        ;;
+    hibernate)
+        run_first_supported \
+            "systemctl hibernate" \
+            "loginctl hibernate" \
+            "ZZZ" \
+            "acpiconf -s 4" \
+            "sudo acpiconf -s 4"
+        ;;
+    *)
+        echo "Usage: $0 {start-polkit-agent|dbus-update-env|lock|lock-session|reboot|poweroff|suspend|hibernate}" >&2
+        exit 1
+        ;;
+esac
