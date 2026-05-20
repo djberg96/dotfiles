@@ -1,0 +1,16 @@
+#!/usr/bin/env bash
+
+SETTINGS_FILE="$HOME/.config/ml4w/settings/terminal.sh"
+terminal_command="kitty"
+
+if [[ -s "$SETTINGS_FILE" ]]; then
+    terminal_command="$(tr -d '\r' < "$SETTINGS_FILE")"
+fi
+
+if [[ $# -eq 0 ]]; then
+    echo "Usage: $0 <command> [args...]" >&2
+    exit 1
+fi
+
+quoted_args="$(printf '%q ' "$@")"
+exec bash -lc "$terminal_command --class dotfiles-floating -e $quoted_args"

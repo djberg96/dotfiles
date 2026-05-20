@@ -1,60 +1,103 @@
 #!/usr/bin/env bash
 
-# --- 1. PRE-FLIGHT CHECKS ---
+# shellcheck source=/dev/null
+source "$HOME/.config/ml4w/scripts/ml4w-platform"
 
-if ! command -v gum &> /dev/null; then
+if ! command -v gum >/dev/null 2>&1; then
     echo "Error: 'gum' is not installed. Please install gum first."
     exit 1
 fi
 
-# List of conflicting Display Managers to check
 CONFLICTING_DMS="gdm lightdm lxdm xdm mdm slim wdm"
+LOCALBASE="${LOCALBASE:-/usr/local}"
+THEME_CACHE_DIR="$HOME/.cache/ml4w-tmp"
 
-# --- 2. OS DETECTION (By Package Manager) ---
-
-if command -v pacman &> /dev/null; then
+if command -v pacman >/dev/null 2>&1; then
     DISTRO="Arch Linux"
-    INSTALL_CMD="sudo pacman -S --noconfirm sddm qt6-svg qt6-virtualkeyboard qt6-multimedia-ffmpeg"
-    CHECK_PKG_CMD="pacman -Qi sddm"
-elif command -v dnf &> /dev/null; then
+    SDDM_CONF_FILE="/etc/sddm.conf.d/ml4w.conf"
+    SDDM_THEME_ROOT="/usr/share/sddm/themes"
+    INSTALL_PACKAGES=(sddm qt6-svg qt6-virtualkeyboard qt6-multimedia-ffmpeg)
+    PKG_CHECK_CMD=(pacman -Qi sddm)
+    USE_FREEBSD_RC="false"
+elif command -v dnf >/dev/null 2>&1; then
     DISTRO="Fedora"
-    INSTALL_CMD="sudo dnf install -y sddm qt6-qtsvg qt6-qtvirtualkeyboard qt6-qtmultimedia"
-    CHECK_PKG_CMD="rpm -q sddm"
-elif command -v zypper &> /dev/null; then
+    SDDM_CONF_FILE="/etc/sddm.conf.d/ml4w.conf"
+    SDDM_THEME_ROOT="/usr/share/sddm/themes"
+    INSTALL_PACKAGES=(sddm qt6-qtsvg qt6-qtvirtualkeyboard qt6-qtmultimedia)
+    PKG_CHECK_CMD=(rpm -q sddm)
+    USE_FREEBSD_RC="false"
+elif command -v zypper >/dev/null 2>&1; then
     DISTRO="openSUSE Tumbleweed"
-    INSTALL_CMD="sudo zypper install -y sddm-qt6 libQt6Svg6 qt6-virtualkeyboard qt6-virtualkeyboard-imports qt6-multimedia qt6-multimedia-imports"
-    CHECK_PKG_CMD="rpm -q sddm"
+    SDDM_CONF_FILE="/etc/sddm.conf.d/ml4w.conf"
+    SDDM_THEME_ROOT="/usr/share/sddm/themes"
+    INSTALL_PACKAGES=(sddm-qt6 libQt6Svg6 qt6-virtualkeyboard qt6-virtualkeyboard-imports qt6-multimedia qt6-multimedia-imports)
+    PKG_CHECK_CMD=(rpm -q sddm)
+    USE_FREEBSD_RC="false"
+elif ml4w_is_freebsd && command -v pkg >/dev/null 2>&1; then
+    DISTRO="FreeBSD"
+    SDDM_CONF_FILE="$LOCALBASE/etc/sddm.conf.d/ml4w.conf"
+    SDDM_THEME_ROOT="$LOCALBASE/share/sddm/themes"
+    PKG_CHECK_CMD=(pkg info -e sddm)
+    USE_FREEBSD_RC="true"
+    INSTALL_PACKAGES=(sddm)
+    for pkg_name in qt6-svg qt6-virtualkeyboard qt6-multimedia; do
+        if pkg search -eq "$pkg_name" >/dev/null 2>&1; then
+            INSTALL_PACKAGES+=("$pkg_name")
+        fi
+    done
 else
     echo "ERROR: Unsupported package manager"
     exit 1
 fi
 
-primarycolor=$(cat ~/.config/ml4w/colors/primary)
-onsurfacecolor=$(cat ~/.config/ml4w/colors/onsurface)
-onprimarycolor=$(cat ~/.config/ml4w/colors/onprimary)
-
-# --- 3. HELPER FUNCTIONS ---
+primarycolor="$(cat ~/.config/ml4w/colors/primary)"
+onsurfacecolor="$(cat ~/.config/ml4w/colors/onsurface)"
+onprimarycolor="$(cat ~/.config/ml4w/colors/onprimary)"
 
 check_sddm_installed() {
-    $CHECK_PKG_CMD &> /dev/null
+    "${PKG_CHECK_CMD[@]}" >/dev/null 2>&1
 }
 
 check_sddm_active() {
-    # Checks if a display manager is active
-    systemctl is-active --quiet display-manager
+    if [[ "$USE_FREEBSD_RC" == "true" ]]; then
+        service sddm onestatus >/dev/null 2>&1 || [[ "$(sysrc -n sddm_enable 2>/dev/null)" == "YES" ]]
+    else
+        systemctl is-active --quiet display-manager
+    fi
 }
 
 install_sddm() {
     sudo -v
-    echo ":: Installing SDDM on $DISTRO..." && bash -c "$INSTALL_CMD"
+    echo ":: Installing SDDM on $DISTRO..."
+
+    if [[ "$USE_FREEBSD_RC" == "true" ]]; then
+        sudo pkg install -y "${INSTALL_PACKAGES[@]}"
+    elif command -v pacman >/dev/null 2>&1; then
+        sudo pacman -S --noconfirm "${INSTALL_PACKAGES[@]}"
+    elif command -v dnf >/dev/null 2>&1; then
+        sudo dnf install -y "${INSTALL_PACKAGES[@]}"
+    elif command -v zypper >/dev/null 2>&1; then
+        sudo zypper install -y "${INSTALL_PACKAGES[@]}"
+    else
+        echo "ERROR: No supported installer found."
+        exit 1
+    fi
 }
 
 disable_other_dms() {
+    local dm
+
     for dm in $CONFLICTING_DMS; do
-        # Only disable the service, DO NOT stop it.
-        # Stopping it would kill the current GUI session immediately.
-        if systemctl is-enabled --quiet "$dm" 2>/dev/null; then
-             echo ":: Disabling conflicting DM: $dm..." && sudo systemctl disable "$dm"
+        if [[ "$USE_FREEBSD_RC" == "true" ]]; then
+            if sysrc -n "${dm}_enable" 2>/dev/null | grep -qi '^yes$'; then
+                echo ":: Disabling conflicting DM: $dm..."
+                sudo sysrc "${dm}_enable=NO" >/dev/null
+            fi
+        else
+            if systemctl is-enabled --quiet "$dm" 2>/dev/null; then
+                echo ":: Disabling conflicting DM: $dm..."
+                sudo systemctl disable "$dm"
+            fi
         fi
     done
 }
@@ -66,147 +109,147 @@ activate_sddm() {
     fi
 
     disable_other_dms
-    
-    echo ":: Enabling SDDM Service..." && if sudo systemctl enable sddm; then
-        echo ":: SDDM Service Enabled."
-        echo ":: Please reboot your system to apply changes."
+
+    if [[ "$USE_FREEBSD_RC" == "true" ]]; then
+        echo ":: Enabling SDDM rc service..."
+        sudo sysrc sddm_enable=YES >/dev/null
+        if sudo service sddm onestart >/dev/null 2>&1; then
+            echo ":: SDDM started."
+        else
+            echo ":: SDDM enabled. Please reboot or start it manually if needed."
+        fi
     else
-        echo "ERROR: Failed to enable SDDM systemd service."
-        exit 1
+        echo ":: Enabling SDDM Service..."
+        if sudo systemctl enable sddm; then
+            echo ":: SDDM Service Enabled."
+            echo ":: Please reboot your system to apply changes."
+        else
+            echo "ERROR: Failed to enable SDDM systemd service."
+            exit 1
+        fi
     fi
 }
 
 deactivate_sddm() {
-    if ! sudo -v; then exit 1; fi
-    echo ":: Deactivating SDDM..." && sudo systemctl disable sddm
+    if ! sudo -v; then
+        exit 1
+    fi
+
+    echo ":: Deactivating SDDM..."
+    if [[ "$USE_FREEBSD_RC" == "true" ]]; then
+        sudo sysrc sddm_enable=NO >/dev/null
+        sudo service sddm onestop >/dev/null 2>&1 || true
+    else
+        sudo systemctl disable sddm
+    fi
     echo ":: SDDM has been deactivated. You are currently without an active Display Manager."
 }
 
+write_theme_config() {
+    local theme_dir="$SDDM_THEME_ROOT/ml4w"
+    local component_path="$theme_dir/components/"
+    local config_body
+
+    config_body=$(cat <<EOF
+[Theme]
+Current=ml4w
+
+[General]
+InputMethod=qtvirtualkeyboard
+GreeterEnvironment=QML2_IMPORT_PATH=${component_path},QT_IM_MODULE=qtvirtualkeyboard
+EOF
+)
+
+    sudo mkdir -p "$(dirname "$SDDM_CONF_FILE")"
+    printf '%s\n' "$config_body" | sudo tee "$SDDM_CONF_FILE" >/dev/null
+    echo ":: Wrote theme config to $SDDM_CONF_FILE"
+}
+
+apply_theme() {
+    write_theme_config
+}
+
 install_theme() {
+    local theme_dir="$SDDM_THEME_ROOT/ml4w"
+
     echo ":: Starting installation of the ML4W SDDM theme..."
-    
-    echo ":: Creating temporary directory..."
-    rm -rf $HOME/.cache/ml4w-tmp
-    mkdir -p $HOME/.cache/ml4w-tmp
-    
+    rm -rf "$THEME_CACHE_DIR"
+    mkdir -p "$THEME_CACHE_DIR"
+
     echo ":: Cloning theme into temporary directory..."
-    git clone --depth 1 https://github.com/mylinuxforwork/ml4w-sddm $HOME/.cache/ml4w-tmp/ml4w-sddm
+    git clone --depth 1 https://github.com/mylinuxforwork/ml4w-sddm "$THEME_CACHE_DIR/ml4w-sddm"
 
     echo ":: Copy theme to sddm folder..."
-    sudo mkdir -p /usr/share/sddm/themes/ml4w
-    sudo cp -rf $HOME/.cache/ml4w-tmp/ml4w-sddm/. /usr/share/sddm/themes/ml4w/
+    sudo mkdir -p "$theme_dir"
+    sudo cp -Rf "$THEME_CACHE_DIR/ml4w-sddm/." "$theme_dir/"
 
     apply_theme
 
     echo ":: Cleaning up..."
-    rm -rf $HOME/.cache/ml4w-tmp
-
-    echo ":: ML4W SDDM theme installed succesfully"
-}
-
-apply_theme () {
-    echo ":: Activating theme in /etc/sddm.conf..."
-    if [[ -f /etc/sddm.conf ]]; then
-        sudo cp -f /etc/sddm.conf /etc/sddm.conf.bak
-        echo ":: Backup for SDDM config saved in /etc/sddm.conf.bak"
-
-        if grep -Pzq '\[Theme\]\nCurrent=' /etc/sddm.conf; then
-            sudo sed -i '/^\[Theme\]$/{N;s/\(Current=\).*/\1ml4w/;}' /etc/sddm.conf
-        else
-            echo -e "\n[Theme]\nCurrent=ml4w" | sudo tee -a /etc/sddm.conf
-        fi
-
-        if ! grep -Pzq 'InputMethod=qtvirtualkeyboard' /etc/sddm.conf; then
-            echo -e "\n[General]\nInputMethod=qtvirtualkeyboard" | sudo tee -a /etc/sddm.conf
-        fi
-
-        # "InputMethod" was supposed to automatically set "QT_IM_MODULE", but it doesn't, so we manually export it.
-        if ! grep -Pzq 'GreeterEnvironment=QML2_IMPORT_PATH=/usr/share/sddm/themes/ml4w/components/,QT_IM_MODULE=qtvirtualkeyboard' /etc/sddm.conf; then
-            echo -e "\n[General]\nGreeterEnvironment=QML2_IMPORT_PATH=/usr/share/sddm/themes/ml4w/components/,QT_IM_MODULE=qtvirtualkeyboard" | sudo tee -a /etc/sddm.conf
-        fi
-    else
-        echo -e "[Theme]\nCurrent=ml4w" | sudo tee -a /etc/sddm.conf
-        echo -e "\n[General]\nInputMethod=qtvirtualkeyboard" | sudo tee -a /etc/sddm.conf
-        echo -e "GreeterEnvironment=QML2_IMPORT_PATH=/usr/share/sddm/themes/ml4w/components/,QT_IM_MODULE=qtvirtualkeyboard" | sudo tee -a /etc/sddm.conf
-    fi
+    rm -rf "$THEME_CACHE_DIR"
+    echo ":: ML4W SDDM theme installed successfully"
 }
 
 copy_wallpaper_to_sddm() {
+    local wallpaper_path_file="$HOME/.cache/ml4w/hyprland-dotfiles/current_wallpaper"
+    local source_wallpaper=""
+    local dest_wallpaper="$SDDM_THEME_ROOT/ml4w/backgrounds/ml4w.jpg"
+    local mime_type=""
+    local temp_jpg="/tmp/current_wallpaper_sddm.jpg"
+
     echo ":: Copying current wallpaper to SDDM theme background..."
 
-    if ! command -v convert &> /dev/null; then
+    if ! command -v convert >/dev/null 2>&1; then
         echo "ERROR: 'imagemagick' (convert command) is not installed. Please install it to use this feature."
         return 1
     fi
 
-    # Read the actual wallpaper path from the file
-    WALLPAPER_PATH_FILE="$HOME/.cache/ml4w/hyprland-dotfiles/current_wallpaper"
-    if [ ! -f "$WALLPAPER_PATH_FILE" ]; then
-        echo "ERROR: Wallpaper path file not found at '$WALLPAPER_PATH_FILE'."
+    if [[ ! -f "$wallpaper_path_file" ]]; then
+        echo "ERROR: Wallpaper path file not found at '$wallpaper_path_file'."
         return 1
     fi
-    SOURCE_WALLPAPER=$(cat "$WALLPAPER_PATH_FILE")
+    source_wallpaper="$(cat "$wallpaper_path_file")"
 
-    if [ ! -f "$SOURCE_WALLPAPER" ]; then
-        echo "ERROR: Actual wallpaper file not found at '$SOURCE_WALLPAPER' (read from '$WALLPAPER_PATH_FILE')."
+    if [[ ! -f "$source_wallpaper" ]]; then
+        echo "ERROR: Actual wallpaper file not found at '$source_wallpaper'."
         return 1
     fi
 
-    DEST_WALLPAPER="/usr/share/sddm/themes/ml4w/backgrounds/ml4w.jpg"
-
-    # Determine file type and convert if necessary
-    MIME_TYPE=$(file --mime-type -b "$SOURCE_WALLPAPER")
-    TEMP_JPG="/tmp/current_wallpaper_sddm.jpg" # Changed temp file name to avoid conflict
-
-    if [[ "$MIME_TYPE" == "image/jpeg" ]]; then
-        cp "$SOURCE_WALLPAPER" "$TEMP_JPG"
-        echo ":: Wallpaper is already JPEG. Copying directly."
-    elif [[ "$MIME_TYPE" == "image/png" ]]; then
-        echo ":: Converting PNG wallpaper to JPEG..." && convert "$SOURCE_WALLPAPER" "$TEMP_JPG"
-        if [ $? -ne 0 ]; then
-            echo "ERROR: Failed to convert wallpaper to JPEG."
-            rm -f "$TEMP_JPG"
-            return 1
-        fi
-        echo ":: Wallpaper converted to JPEG."
+    mime_type="$(file --mime-type -b "$source_wallpaper")"
+    if [[ "$mime_type" == "image/jpeg" ]]; then
+        cp "$source_wallpaper" "$temp_jpg"
+    elif [[ "$mime_type" == "image/png" ]]; then
+        echo ":: Converting PNG wallpaper to JPEG..."
+        convert "$source_wallpaper" "$temp_jpg" || return 1
     else
-        echo "ERROR: Unsupported wallpaper format ($MIME_TYPE). Only JPEG and PNG are supported."
+        echo "ERROR: Unsupported wallpaper format ($mime_type). Only JPEG and PNG are supported."
         return 1
     fi
 
-    # Copy to SDDM theme directory
-    echo ":: Copying wallpaper to SDDM theme..." && sudo cp "$TEMP_JPG" "$DEST_WALLPAPER"
-    if [ $? -ne 0 ]; then
-        echo "ERROR: Failed to copy wallpaper to SDDM theme background."
-        rm -f "$TEMP_JPG"
-        return 1
-    fi
+    sudo mkdir -p "$(dirname "$dest_wallpaper")"
+    sudo cp "$temp_jpg" "$dest_wallpaper"
+    rm -f "$temp_jpg"
     echo ":: Wallpaper successfully copied to SDDM theme background."
-    rm -f "$TEMP_JPG"
-    return 0
 }
-
-# --- 4. MAIN LOGIC ---
 
 clear
 figlet -f smslant "ML4W SDDM"
 
-# STATE 1: SDDM Not Installed
 if ! check_sddm_installed; then
     echo ":: Status: SDDM is NOT installed."
     echo
-    if gum confirm --selected.background=$primarycolor --selected.foreground=$onprimarycolor --prompt.foreground=$onsurfacecolor "Do you want to install SDDM?"; then
+    if gum confirm --selected.background="$primarycolor" --selected.foreground="$onprimarycolor" --prompt.foreground="$onsurfacecolor" "Do you want to install SDDM?"; then
         install_sddm
-        
+
         if check_sddm_installed; then
             echo ":: SDDM installed successfully!"
-            
-            if gum confirm --selected.background=$primarycolor --selected.foreground=$onprimarycolor --prompt.foreground=$onsurfacecolor "Do you want to activate SDDM now?"; then
+
+            if gum confirm --selected.background="$primarycolor" --selected.foreground="$onprimarycolor" --prompt.foreground="$onsurfacecolor" "Do you want to activate SDDM now?"; then
                 activate_sddm
-                echo ":: SDDM Activated."
+                echo ":: SDDM activated."
             fi
-            
-            if gum confirm --selected.background=$primarycolor --selected.foreground=$onprimarycolor --prompt.foreground=$onsurfacecolor "Install the special ML4W SDDM Theme?"; then
+
+            if gum confirm --selected.background="$primarycolor" --selected.foreground="$onprimarycolor" --prompt.foreground="$onsurfacecolor" "Install the special ML4W SDDM theme?"; then
                 install_theme
             fi
         else
@@ -217,28 +260,23 @@ if ! check_sddm_installed; then
         echo ":: Installation cancelled."
         exit 0
     fi
-
-# STATE 2: Installed but Not Active
 elif ! check_sddm_active; then
     echo ":: SDDM is installed but NOT active."
     echo
-    if gum confirm --selected.background=$primarycolor --selected.foreground=$onprimarycolor --prompt.foreground=$onsurfacecolor "Do you want to activate SDDM?"; then
+    if gum confirm --selected.background="$primarycolor" --selected.foreground="$onprimarycolor" --prompt.foreground="$onsurfacecolor" "Do you want to activate SDDM?"; then
         activate_sddm
-        echo ":: SDDM Activated."
-    fi
-    
-    if gum confirm --selected.background=$primarycolor --selected.foreground=$onprimarycolor --prompt.foreground=$onsurfacecolor "Install the special ML4W SDDM Theme?"; then
-        install_theme
+        echo ":: SDDM activated."
     fi
 
-# STATE 3: Installed and Active
+    if gum confirm --selected.background="$primarycolor" --selected.foreground="$onprimarycolor" --prompt.foreground="$onsurfacecolor" "Install the special ML4W SDDM theme?"; then
+        install_theme
+    fi
 else
     echo ":: SDDM is installed and active."
     echo
-    # Using gum choose for multiple options in this state
-    ACTION=$(gum choose --selected.background=$primarycolor --selected.foreground=$onprimarycolor "Install ML4W Theme" "Copy Wallpaper to SDDM" "Deactivate SDDM" "Exit")
-    
-    case $ACTION in
+    ACTION=$(gum choose --selected.background="$primarycolor" --selected.foreground="$onprimarycolor" "Install ML4W Theme" "Copy Wallpaper to SDDM" "Deactivate SDDM" "Exit")
+
+    case "$ACTION" in
         "Install ML4W Theme")
             install_theme
             ;;
@@ -246,18 +284,12 @@ else
             copy_wallpaper_to_sddm
             ;;
         "Deactivate SDDM")
-            if gum confirm --selected.background=$primarycolor --selected.foreground=$onprimarycolor --prompt.foreground=$onsurfacecolor "Are you sure you want to deactivate SDDM?"; then
+            if gum confirm --selected.background="$primarycolor" --selected.foreground="$onprimarycolor" --prompt.foreground="$onsurfacecolor" "Are you sure you want to deactivate SDDM?"; then
                 deactivate_sddm
             fi
             ;;
         "Exit")
-            echo "Exiting."
             exit 0
             ;;
     esac
 fi
-
-# Finishing
-echo
-echo ":: Installation complete! Press [ENTER] to close."
-read

@@ -5,6 +5,12 @@
 # /_//_/_/_/_/\_,_/ .__/ .__/_/\__/\__/
 #                /_/  /_/
 #
+
+if ! command -v nm-applet >/dev/null 2>&1; then
+    echo ":: nm-applet is not installed on this system."
+    exit 0
+fi
+
 if [[ "$1" == "stop" ]]; then
     killall nm-applet
 elif [[ "$1" == "toggle" ]]; then

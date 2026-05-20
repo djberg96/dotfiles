@@ -27,6 +27,8 @@ This fork now includes a small compatibility layer to reduce Linux-specific assu
 
 FreeBSD support should still be considered experimental. The desktop stack itself still depends on FreeBSD packages for Hyprland, Waybar, SwayNC, Quickshell, clipboard tools, portals, and related Wayland utilities being installed separately, and some Linux-focused utilities may still need local customization through files in `~/.config/ml4w/settings/`.
 
+This fork also adjusts several maintenance helpers for FreeBSD. The SDDM helper now has a FreeBSD path using `pkg`, `sysrc`, and `service`, and the snapshot helper can create ZFS boot environments with `bectl` when available. Some scripts remain intentionally Linux-only for now, such as the pacman-specific tweak helpers and the NVIDIA bootstrap script.
+
 ### Test and install with the ML4W OS Live ISO
 
 Test the ML4W OS without risk on your computer or in a Virtual Machine with the ML4W Live ISO.

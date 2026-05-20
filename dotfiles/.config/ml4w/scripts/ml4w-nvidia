@@ -1,5 +1,8 @@
 #!/usr/bin/env bash
 
+# shellcheck source=/dev/null
+source "$HOME/.config/ml4w/scripts/ml4w-platform"
+
 info() { echo -e "${BLUE}[BOOTSTRAP]${NC} $1"; }
 success() { echo -e "${GREEN}[SUCCESS]${NC} $1"; }
 warn() { echo -e "${YELLOW}[WARN]${NC} $1"; }
@@ -7,7 +10,11 @@ error() { echo -e "${RED}[ERROR]${NC} $1"; exit 1; }
 
 # --- 2. OS DETECTION (By Package Manager) ---
 
-if command -v pacman &> /dev/null; then
+if ml4w_is_freebsd; then
+    echo "ERROR: FreeBSD NVIDIA setup is not automated by this script yet."
+    echo ":: Please install the appropriate FreeBSD NVIDIA driver packages manually and then review ~/.config/hypr/conf/environments/nvidia.conf."
+    exit 1
+elif command -v pacman &> /dev/null; then
     DISTRO="Arch Linux"
     INSTALL_CMD="sudo pacman -S --noconfirm nvidia-open-dkms nvidia-utils nvidia-settings egl-wayland lib32-nvidia-utils"
     CHECK_PKG_CMD="pacman -Qi sddm"

@@ -1,35 +1,60 @@
-#!/bin/bash
-#  ____                        _           _
-# / ___| _ __   __ _ _ __  ___| |__   ___ | |_
-# \___ \| '_ \ / _` | '_ \/ __| '_ \ / _ \| __|
-#  ___) | | | | (_| | |_) \__ \ | | | (_) | |_
-# |____/|_| |_|\__,_| .__/|___/_| |_|\___/ \__|
-#                   |_|
-#
-# Original by Stephan Raabe (2024)
-# Extended for Fedora/openSUSE (2026)
-# -----------------------------------------------------
+#!/usr/bin/env bash
+
+# shellcheck source=/dev/null
+source "$HOME/.config/ml4w/scripts/ml4w-platform"
 
 sleep 1
 clear
-if command -v figlet &> /dev/null; then
+if command -v figlet >/dev/null 2>&1; then
     figlet -f smslant "Snapshot"
 else
     echo "--- Snapshot Tool ---"
 fi
 
-# --- OS Detection & Package Manager Setup ---
-if command -v pacman &> /dev/null; then
+create_freebsd_snapshot() {
+    local comment=""
+    local sanitized=""
+    local name=""
+
+    if ! command -v bectl >/dev/null 2>&1; then
+        echo "ERROR: bectl is not available. This feature requires a ZFS boot environment setup."
+        exit 1
+    fi
+
+    comment="$(gum input --placeholder "Enter a short name for the boot environment...")"
+    sanitized="$(printf '%s' "${comment:-manual}" | tr '[:space:]/:' '-' | tr -cd '[:alnum:]_.-')"
+    name="ml4w-${sanitized:-snapshot}-$(date +%Y%m%d-%H%M%S)"
+
+    echo ":: Creating FreeBSD boot environment '$name'..."
+    if sudo bectl create "$name"; then
+        echo ":: Boot environment created successfully."
+        echo ":: Use 'sudo bectl activate $name' to make it the boot target if you need to roll back."
+        if gum confirm "Do you want to activate '$name' for the next boot now?"; then
+            sudo bectl activate "$name"
+            echo ":: '$name' will be used on next boot."
+        fi
+    else
+        echo "ERROR: Failed to create a boot environment. Make sure the system uses ZFS boot environments."
+        exit 1
+    fi
+}
+
+if ml4w_is_freebsd; then
+    create_freebsd_snapshot
+    exit 0
+fi
+
+if command -v pacman >/dev/null 2>&1; then
     OS="Arch"
     PKG_INST="pacman -S"
     CHECK_CMD="pacman -Qs"
     GRUB_CFG="/boot/grub/grub.cfg"
-elif command -v dnf &> /dev/null; then
+elif command -v dnf >/dev/null 2>&1; then
     OS="Fedora"
     PKG_INST="sudo dnf install"
     CHECK_CMD="rpm -q"
     GRUB_CFG="/boot/grub2/grub.cfg"
-elif command -v zypper &> /dev/null; then
+elif command -v zypper >/dev/null 2>&1; then
     OS="openSUSE"
     PKG_INST="sudo zypper install"
     CHECK_CMD="zypper se -i"
@@ -40,28 +65,24 @@ else
 fi
 
 _isInstalled() {
-    package="$1"
-    if [[ "$OS" == "Arch" ]]; then
-        if $CHECK_CMD "$package" > /dev/null 2>&1; then echo 0; else echo 1; fi
-    elif [[ "$OS" == "Fedora" ]]; then
-        if $CHECK_CMD "$package" > /dev/null 2>&1; then echo 0; else echo 1; fi
-    elif [[ "$OS" == "openSUSE" ]]; then
-        # zypper se -i returns 0 if found
-        if $CHECK_CMD "$package" > /dev/null 2>&1; then echo 0; else echo 1; fi
+    local package="$1"
+    if $CHECK_CMD "$package" >/dev/null 2>&1; then
+        echo 0
+    else
+        echo 1
     fi
 }
 
-timeshift_installed=$(_isInstalled "timeshift")
-grubbtrfs_installed=$(_isInstalled "grub-btrfs")
+timeshift_installed="$(_isInstalled "timeshift")"
+grubbtrfs_installed="$(_isInstalled "grub-btrfs")"
 
-# --- Main Logic ---
-if [[ $timeshift_installed == "0" ]]; then
-    c=$(gum input --placeholder "Enter a comment for the snapshot...")
+if [[ "$timeshift_installed" == "0" ]]; then
+    c="$(gum input --placeholder "Enter a comment for the snapshot...")"
     sudo timeshift --create --comments "$c"
     sudo timeshift --list
-    
-    if [[ -f $GRUB_CFG ]]; then
-        if [[ $grubbtrfs_installed == "1" ]]; then
+
+    if [[ -f "$GRUB_CFG" ]]; then
+        if [[ "$grubbtrfs_installed" == "1" ]]; then
             if gum confirm "grub-btrfs not found. DO YOU WANT TO INSTALL IT NOW?"; then
                 $PKG_INST grub-btrfs
             else
@@ -77,8 +98,8 @@ else
     if gum confirm "DO YOU WANT TO INSTALL Timeshift now?"; then
         $PKG_INST timeshift
         echo ":: Timeshift has been installed. Please restart this script."
-        
-        if [[ $grubbtrfs_installed == "1" ]]; then
+
+        if [[ "$grubbtrfs_installed" == "1" ]]; then
             echo ":: grub-btrfs is recommended to select snapshots at boot."
             if gum confirm "DO YOU WANT TO INSTALL grub-btrfs now?"; then
                 $PKG_INST grub-btrfs

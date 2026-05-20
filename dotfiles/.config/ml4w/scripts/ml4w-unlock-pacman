@@ -1,5 +1,10 @@
-#!/bin/bash
+#!/usr/bin/env bash
+
 sleep 1
+if ! command -v pacman >/dev/null 2>&1; then
+    echo ":: This helper only applies to pacman-based systems."
+    exit 0
+fi
 if [ -f /var/lib/pacman/db.lck ]; then
     sudo rm /var/lib/pacman/db.lck
     echo ":: Unlock complete"

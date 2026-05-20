@@ -1,4 +1,10 @@
-#!/bin/bash
+#!/usr/bin/env bash
+
+if ! command -v pacman >/dev/null 2>&1; then
+    echo ":: This helper only applies to pacman-based systems."
+    exit 0
+fi
+
 #  ____
 # |  _ \ __ _  ___ _ __ ___   __ _ _ __
 # | |_) / _` |/ __| '_ ` _ \ / _` | '_ \

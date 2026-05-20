@@ -110,7 +110,7 @@ FloatingWindow {
                 ML4WMenuItem { 
                     text: qsTr("Network");
                     onClicked: { 
-                        Quickshell.execDetached(["kitty", "--class", "dotfiles-floating", "-e", Quickshell.env("HOME") + "/.config/ml4w/scripts/ml4w-network"])
+                        Quickshell.execDetached(["bash", "-lc", Quickshell.env("HOME") + "/.config/ml4w/scripts/ml4w-open-terminal " + Quickshell.env("HOME") + "/.config/ml4w/scripts/ml4w-network"])
                     }
                 }    
                 ML4WMenuItem { 
@@ -150,7 +150,7 @@ FloatingWindow {
                         if (root.isHyprlandSettingsInstalled) {
                             Quickshell.execDetached(["bash","-c","flatpak run com.ml4w.hyprlandsettings"])
                         } else {
-                            Quickshell.execDetached(["kitty", "--class", "dotfiles-floating", "-e", Quickshell.env("HOME") + "/.config/ml4w/scripts/ml4w-install-hyprlandsettings"])
+                            Quickshell.execDetached(["bash", "-lc", Quickshell.env("HOME") + "/.config/ml4w/scripts/ml4w-open-terminal " + Quickshell.env("HOME") + "/.config/ml4w/scripts/ml4w-install-hyprlandsettings"])
                         }
                     }
                 }
@@ -176,7 +176,7 @@ FloatingWindow {
                 ML4WMenuItem { 
                     text: qsTr("Display Manager");
                     onClicked: { 
-                        Quickshell.execDetached(["kitty", "--class", "dotfiles-floating", "-e", Quickshell.env("HOME") + "/.config/ml4w/scripts/ml4w-install-sddm"]) 
+                        Quickshell.execDetached(["bash", "-lc", Quickshell.env("HOME") + "/.config/ml4w/scripts/ml4w-open-terminal " + Quickshell.env("HOME") + "/.config/ml4w/scripts/ml4w-install-sddm"]) 
                     }
                 }
                 ML4WMenuItem { 
@@ -188,13 +188,13 @@ FloatingWindow {
                 ML4WMenuItem { 
                     text: qsTr("Change Shell");
                     onClicked: { 
-                        Quickshell.execDetached(["kitty", "--class", "dotfiles-floating", "-e", Quickshell.env("HOME") + "/.config/ml4w/scripts/ml4w-change-shell"])
+                        Quickshell.execDetached(["bash", "-lc", Quickshell.env("HOME") + "/.config/ml4w/scripts/ml4w-open-terminal " + Quickshell.env("HOME") + "/.config/ml4w/scripts/ml4w-change-shell"])
                     }
                 }
                 ML4WMenuItem { 
                     text: qsTr("System Info") 
                     onClicked: { 
-                        Quickshell.execDetached(["kitty", "--class", "dotfiles-floating", "-e", Quickshell.env("HOME") + "/.config/hypr/scripts/systeminfo.sh"])
+                        Quickshell.execDetached(["bash", "-lc", Quickshell.env("HOME") + "/.config/ml4w/scripts/ml4w-open-terminal " + Quickshell.env("HOME") + "/.config/hypr/scripts/systeminfo.sh"])
                     }
                 }
                 ML4WMenuSeparator {}
